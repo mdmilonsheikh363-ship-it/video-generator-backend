@@ -2,8 +2,12 @@ import os
 import asyncio
 import edge_tts
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+# CORS সাপোর্ট চালু করা (সব উৎস থেকে কানেকশন অ্যালাউ করবে)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ভয়েস জেনারেশন ফাংশন
 async def generate_voice(text, gender, output_file):
@@ -11,11 +15,20 @@ async def generate_voice(text, gender, output_file):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_file)
 
+# অ্যাসিনক্রোনাস কাজ রান করার নিরাপদ উপায়
+def run_async(coro):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({"status": "Server is running perfectly!"})
 
-@app.route('/generate-video', methods=['POST'])
+@app.route('/generate-video', methods=['GET', 'POST'])
 def generate_video_api():
     try:
         data = request.json or {}
@@ -24,9 +37,9 @@ def generate_video_api():
         female_dialogue = data.get('female_text', '')
 
         if male_dialogue:
-            asyncio.run(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
+            run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
         if female_dialogue:
-            asyncio.run(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
+            run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
         video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
 
