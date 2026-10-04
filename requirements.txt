@@ -1,4 +1,5 @@
 flask
-edge-tts
+flask-cors
 gunicorn
+edge-tts
 requests
