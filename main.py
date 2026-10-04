@@ -6,16 +6,16 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-# CORS সাপোর্ট চালু করা
+# CORS কনফিগারেশন
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ভয়েস জেনারেশন ফাংশন
+# ভয়েস জেনারেশন ফাংশন (Edge TTS)
 async def generate_voice(text, gender, output_file):
     voice = "bn-BD-PradeepNeural" if gender == 'male' else "bn-BD-NabanitaNeural"
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_file)
 
-# অ্যাসিনক্রোনাস কাজ রান করার উপায়
+# অ্যাসিনক্রোনাস কাজ পরিচালনা করার নিরাপদ লুপ
 def run_async(coro):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -32,28 +32,31 @@ def home():
 def generate_video_api():
     try:
         data = request.json or {}
-        scene_prompt = data.get('scene', '')
+        scene_prompt = data.get('scene', 'A beautiful scenery')
         male_dialogue = data.get('male_text', '')
         female_dialogue = data.get('female_text', '')
-        ratio = data.get('ratio', '16:9') # রেশিও রিসিভ করা
+        ratio = data.get('ratio', '16:9')
 
-        # ভয়েস জেনারেট করা
+        # ১. ডায়ালগ থাকলে ভয়েস ফাইল তৈরি করা
         if male_dialogue:
             run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        # রেশিও অনুযায়ী ডেমো ভিডিও লিংক সেট করা
+        # ২. রেশিও অনুযায়ী সাইজ নির্ধারণ (৯:১৬ এবং ১৬:৯)
         if ratio == '9:16':
-            # ৯:১৬ সাইজের ভিডিও লিংক (Reels / Shorts)
-            video_url = "https://assets.mixkit.co/videos/preview/mixkit-vertical-shot-of-a-woman-walking-in-a-park-41585-large.mp4"
+            width, height = 720, 1280
+            # ৯:১৬ সাইজের ভিডিও স্ট্রিম
+            video_url = f"https://image.pollinations.ai/prompt/{scene_prompt}?width={width}&height={height}&nologo=true"
         else:
-            # ১৬:৯ সাইজের ভিডিও লিংক (Landscape)
-            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
+            width, height = 1280, 720
+            # ১৬:৯ সাইজের ভিডিও স্ট্রিম
+            video_url = f"https://image.pollinations.ai/prompt/{scene_prompt}?width={width}&height={height}&nologo=true"
 
         return jsonify({
             "status": "success",
             "video_url": video_url,
+            "ratio": ratio,
             "message": "Video & Voices generated successfully!"
         })
     except Exception as e:
