@@ -32,26 +32,24 @@ def home():
 def generate_video_api():
     try:
         data = request.json or {}
-        scene_prompt = data.get('scene', 'A beautiful scenery')
+        scene_prompt = data.get('scene', '')
         male_dialogue = data.get('male_text', '')
         female_dialogue = data.get('female_text', '')
         ratio = data.get('ratio', '16:9')
 
-        # ১. ডায়ালগ থাকলে ভয়েস ফাইল তৈরি করা
+        # ১. ভয়েস তৈরি করা
         if male_dialogue:
             run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        # ২. রেশিও অনুযায়ী সাইজ নির্ধারণ (৯:১৬ এবং ১৬:৯)
+        # ২. রেশিও অনুযায়ী সরাসরি ভিডিও (.mp4) লিংক প্রদান
         if ratio == '9:16':
-            width, height = 720, 1280
-            # ৯:১৬ সাইজের ভিডিও স্ট্রিম
-            video_url = f"https://image.pollinations.ai/prompt/{scene_prompt}?width={width}&height={height}&nologo=true"
+            # ৯:১৬ রেশিওর টেস্ট ভিডিও (Vertical/Reels)
+            video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"
         else:
-            width, height = 1280, 720
-            # ১৬:৯ সাইজের ভিডিও স্ট্রিম
-            video_url = f"https://image.pollinations.ai/prompt/{scene_prompt}?width={width}&height={height}&nologo=true"
+            # ১৬:৯ রেশিওর টেস্ট ভিডিও (Horizontal/Landscape)
+            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
 
         return jsonify({
             "status": "success",
