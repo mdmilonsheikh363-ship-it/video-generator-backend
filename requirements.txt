@@ -1,5 +1,6 @@
 flask
 flask-cors
-gunicorn
 edge-tts
+moviepy
 requests
+gunicorn
