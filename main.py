@@ -8,7 +8,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# আপনার Replicate API Key সেট করা হলো
+# Replicate API Key
 os.environ["REPLICATE_API_TOKEN"] = "R8_YwlYqZZH7KTKphOmJf67zGvixGvWK004TNp9v"
 
 # বাংলা ভয়েস জেনারেটর (Edge-TTS)
@@ -48,17 +48,15 @@ def generate_video_api():
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        # ২. Replicate API দিয়ে আসল AI Video তৈরি
-        # রেশিও কনফিগারেশন (16:9 বা 9:16)
-        aspect_ratio = "16:9" if ratio == '16:9' else "9:16"
+        # ২. Replicate AI Video Generation
+        img_url = f"https://image.pollinations.ai/prompt/{scene_prompt}?width=1280&height=720&nologo=true"
 
-        # Replicate AI Video Model চালানো
         output = replicate.run(
             "stability-ai/stable-video-diffusion:3f045767b77d4084282e3827c191a3c631b15801c8a514d34f0e0108871032bf",
             input={
                 "cond_aug": 0.02,
                 "decoding_t": 14,
-                "input_image": f"https://image.pollinations.ai/prompt/{scene_prompt}?width=1280&height=720&nologo=true",
+                "input_image": img_url,
                 "video_length": "25_frames_with_svd_xt",
                 "sizing_strategy": "maintain_aspect_ratio",
                 "motion_bucket_id": 127,
@@ -66,8 +64,14 @@ def generate_video_api():
             }
         )
 
-        # ভিডিও ইউআরএল বের করা
-        ai_video_url = str(output) if isinstance(output, str) else output[0] if isinstance(output, list) else str(output)
+        # Replicate আউটপুট ফরম্যাট সঠিকভাবে URL-এ রূপান্তর
+        ai_video_url = ""
+        if isinstance(output, list) and len(output) > 0:
+            ai_video_url = str(output[0])
+        elif hasattr(output, 'url'):
+            ai_video_url = str(output.url)
+        else:
+            ai_video_url = str(output)
 
         return jsonify({
             "status": "success",
@@ -77,6 +81,7 @@ def generate_video_api():
         })
 
     except Exception as e:
+        print(f"Error occurred: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
