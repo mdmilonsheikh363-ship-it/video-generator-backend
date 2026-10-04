@@ -35,14 +35,21 @@ def generate_video_api():
         scene_prompt = data.get('scene', '')
         male_dialogue = data.get('male_text', '')
         female_dialogue = data.get('female_text', '')
+        ratio = data.get('ratio', '16:9') # রেশিও রিসিভ করা
 
+        # ভয়েস জেনারেট করা
         if male_dialogue:
             run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        # নির্ভরযোগ্য নমুনা ভিডিও লিংক (যেটি সব ব্রাউজার ও প্লেয়ারে সাবলীলভাবে প্লে হয়)
-        video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
+        # রেশিও অনুযায়ী ডেমো ভিডিও লিংক সেট করা
+        if ratio == '9:16':
+            # ৯:১৬ সাইজের ভিডিও লিংক (Reels / Shorts)
+            video_url = "https://assets.mixkit.co/videos/preview/mixkit-vertical-shot-of-a-woman-walking-in-a-park-41585-large.mp4"
+        else:
+            # ১৬:৯ সাইজের ভিডিও লিংক (Landscape)
+            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
 
         return jsonify({
             "status": "success",
