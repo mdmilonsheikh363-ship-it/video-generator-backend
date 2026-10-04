@@ -1,21 +1,18 @@
 import os
 import asyncio
 import edge_tts
+import urllib.parse
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-
-# CORS কনফিগারেশন
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ভয়েস জেনারেশন ফাংশন (Edge TTS)
 async def generate_voice(text, gender, output_file):
     voice = "bn-BD-PradeepNeural" if gender == 'male' else "bn-BD-NabanitaNeural"
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_file)
 
-# অ্যাসিনক্রোনাস কাজ পরিচালনা করার নিরাপদ লুপ
 def run_async(coro):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -32,30 +29,34 @@ def home():
 def generate_video_api():
     try:
         data = request.json or {}
-        scene_prompt = data.get('scene', '')
+        scene_prompt = data.get('scene', 'A beautiful scenery')
         male_dialogue = data.get('male_text', '')
         female_dialogue = data.get('female_text', '')
         ratio = data.get('ratio', '16:9')
 
-        # ১. ভয়েস তৈরি করা
+        # ভয়েস জেনারেশন
         if male_dialogue:
             run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        # ২. রেশিও অনুযায়ী সরাসরি ভিডিও (.mp4) লিংক প্রদান
+        # ইউআরএল নিরাপদ করা
+        encoded_prompt = urllib.parse.quote(scene_prompt)
+
+        # রেশিও অনুযায়ী সাইজ নির্ধারণ
         if ratio == '9:16':
-            # ৯:১৬ রেশিওর টেস্ট ভিডিও (Vertical/Reels)
-            video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4"
+            width, height = 720, 1280
         else:
-            # ১৬:৯ রেশিওর টেস্ট ভিডিও (Horizontal/Landscape)
-            video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
+            width, height = 1280, 720
+
+        # আপনার দেওয়া প্রম্পট অনুযায়ী বাস্তব AI দৃশ্য (ভিজ্যুয়াল সোর্স)
+        generated_media_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed=42&nologo=true"
 
         return jsonify({
             "status": "success",
-            "video_url": video_url,
+            "video_url": generated_media_url,
             "ratio": ratio,
-            "message": "Video & Voices generated successfully!"
+            "message": "AI Visuals and Voice processed successfully!"
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
