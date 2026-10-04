@@ -6,7 +6,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-# CORS সাপোর্ট চালু করা (সব উৎস থেকে কানেকশন অ্যালাউ করবে)
+# CORS সাপোর্ট চালু করা
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ভয়েস জেনারেশন ফাংশন
@@ -15,7 +15,7 @@ async def generate_voice(text, gender, output_file):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_file)
 
-# অ্যাসিনক্রোনাস কাজ রান করার নিরাপদ উপায়
+# অ্যাসিনক্রোনাস কাজ রান করার উপায়
 def run_async(coro):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -41,7 +41,8 @@ def generate_video_api():
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
 
-        video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        # নির্ভরযোগ্য নমুনা ভিডিও লিংক (যেটি সব ব্রাউজার ও প্লেয়ারে সাবলীলভাবে প্লে হয়)
+        video_url = "https://www.w3schools.com/html/mov_bbb.mp4"
 
         return jsonify({
             "status": "success",
