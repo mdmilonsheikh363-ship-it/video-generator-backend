@@ -5,7 +5,7 @@ import edge_tts
 import urllib.parse
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from moviepy.editor import ImageClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips
+from moviepy.editor import ImageClip, AudioFileClip, CompositeAudioClip
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -24,8 +24,8 @@ def run_async(coro):
     finally:
         loop.close()
 
-# জেনারেট হওয়া ফাইনাল ভিডিও ফাইল ব্রাউজারে ডাইরেক্ট প্লে করার জন্য এন্ডপয়েন্ট
-@app.route('/static/<filename>')
+# তৈরি হওয়া ভিডিও সার্ভ করতে এন্ডপয়েন্ট
+@app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('.', filename)
 
@@ -37,7 +37,7 @@ def home():
 def generate_video_api():
     try:
         data = request.json or {}
-        scene_prompt = data.get('scene', 'A calm natural park view')
+        scene_prompt = data.get('scene', 'A beautiful scenery')
         male_dialogue = data.get('male_text', '')
         female_dialogue = data.get('female_text', '')
         ratio = data.get('ratio', '16:9')
@@ -45,7 +45,7 @@ def generate_video_api():
         audio_clips = []
         total_duration = 0
 
-        # ১. অডিও ফাইল তৈরি (ছেলে ও মেয়ে)
+        # ১. অডিও ভয়েস তৈরি করা
         if male_dialogue:
             run_async(generate_voice(male_dialogue, 'male', 'male_voice.mp3'))
             m_clip = AudioFileClip('male_voice.mp3')
@@ -55,17 +55,15 @@ def generate_video_api():
         if female_dialogue:
             run_async(generate_voice(female_dialogue, 'female', 'female_voice.mp3'))
             f_clip = AudioFileClip('female_voice.mp3')
-            # যদি ছেলের ভয়েসও থাকে তবে একটার পর একটা সাজানো
             if audio_clips:
                 f_clip = f_clip.set_start(total_duration)
             audio_clips.append(f_clip)
             total_duration += f_clip.duration
 
-        # যদি কোনো ভয়েস না দেওয়া হয়, তবে ডিফল্ট ৫ সেকেন্ডের ভিডিও
         if total_duration == 0:
             total_duration = 5.0
 
-        # ২. Pollinations AI দিয়ে টেক্সট প্রম্পট অনুযায়ী ছবি ডাউনলোড করা
+        # ২. Pollinations AI থেকে ছবি ডাউনলোড
         encoded_prompt = urllib.parse.quote(scene_prompt)
         width, height = (720, 1280) if ratio == '9:16' else (1280, 720)
         img_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed=123&nologo=true"
@@ -75,14 +73,14 @@ def generate_video_api():
         with open(img_path, "wb") as f:
             f.write(img_response.content)
 
-        # ৩. MoviePy দিয়ে ছবি ও ভয়েস যুক্ত করে ভিডিও বানানো
+        # ৩. MoviePy দিয়ে পিকচার এবং অডিও মার্জ করা
         video_clip = ImageClip(img_path).set_duration(total_duration)
 
         if audio_clips:
             final_audio = CompositeAudioClip(audio_clips)
             video_clip = video_clip.set_audio(final_audio)
 
-        # ৪. ফাইনাল ভিডিও MP4 ফাইল রেন্ডার ও সেভ করা
+        # ৪. MP4 ফাইল রেন্ডার ও সেভ করা
         output_filename = "final_output.mp4"
         video_clip.write_videofile(
             output_filename,
@@ -92,7 +90,6 @@ def generate_video_api():
             logger=None
         )
 
-        # ভিডিওর ফুল পাবলিক লিংক তৈরি
         host_url = request.host_url.rstrip('/')
         video_public_url = f"{host_url}/static/{output_filename}"
 
